@@ -244,6 +244,12 @@ func main() {
 					// Prompting input
 					ivprompt := promptui.Prompt{
 						Label: "Enter IV",
+						Validate: func(input string) error {
+							if len(input) != 8 {
+								return errors.New("IV must be 8 bytes")
+							}
+							return nil
+						},
 					}
 
 					iv, err := ivprompt.Run()

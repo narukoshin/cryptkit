@@ -4,6 +4,7 @@
 # Allow List
 !.gitignore
 !main.go
+!LICENSE
 
 # Allowing des folder
 !des

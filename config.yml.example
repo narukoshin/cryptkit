@@ -1,0 +1,19 @@
+# DES Encryption Example
+algorithm: des
+input: MY NAME IS RALF
+operation: encrypt
+keys: 
+  - 00112233445566778899AABBCCDDEEFF
+  - 102132435465768798A9BACCADAEAF0F
+  - FFEEDDCCBBAA99887766554433221100
+iv: 00000000 # if not specified then a random one will be generated
+
+# DES Decryption Example
+algorithm: des
+input: 3030303030303030bf004bd132ca9c34d28f1916953d59c9
+operation: decrypt
+keys: 
+  - 00112233445566778899AABBCCDDEEFF
+  - 102132435465768798A9BACCADAEAF0F
+  - FFEEDDCCBBAA99887766554433221100
+iv: # ignored in decryption mode, IV is being taken from ciphertext header

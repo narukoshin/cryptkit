@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
 
-	"github.com/manifoldco/promptui"
 	"os"
+
+	"github.com/manifoldco/promptui"
 
 	"github.com/narukoshin/cryptkit/des"
 	"gopkg.in/yaml.v3"
@@ -138,8 +140,15 @@ func main() {
 		case "3DES":
 			c.Algorithm = "des"
 			// key 1 prompt
+			// validate key length
 			prompt := promptui.Prompt{
 				Label: "Enter key 1",
+				Validate: func(input string) error {
+					if len(input) != 16 {
+						return errors.New("key must be 16 bytes")
+					}
+					return nil
+				},
 			}
 
 			k1prompt, err := prompt.Run()
@@ -156,6 +165,12 @@ func main() {
 			// key 2 prompt
 			prompt = promptui.Prompt{
 				Label: "Enter key 2",
+				Validate: func(input string) error {
+					if len(input) != 16 {
+						return errors.New("key must be 16 bytes")
+					}
+					return nil
+				},
 			}
 
 			k2prompt, err := prompt.Run()
@@ -172,6 +187,12 @@ func main() {
 			// key 3 prompt
 			prompt = promptui.Prompt{
 				Label: "Enter key 3",
+				Validate: func(input string) error {
+					if len(input) != 16 {
+						return errors.New("key must be 16 bytes")
+					}
+					return nil
+				},
 			}
 
 			k3prompt, err := prompt.Run()

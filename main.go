@@ -136,19 +136,22 @@ func main() {
 			return
 		}
 
+		// switch what algorithm is being used
 		switch result {
 		case "3DES":
+			keyvalidator := func(input string) error {
+				if len(input) != 32 {
+						return errors.New("key must be 32 characters long")
+					}
+					return nil
+			}
+
 			c.Algorithm = "des"
 			// key 1 prompt
 			// validate key length
 			prompt := promptui.Prompt{
 				Label: "Enter key 1",
-				Validate: func(input string) error {
-					if len(input) != 16 {
-						return errors.New("key must be 16 bytes")
-					}
-					return nil
-				},
+				Validate: keyvalidator,
 			}
 
 			k1prompt, err := prompt.Run()
@@ -165,12 +168,7 @@ func main() {
 			// key 2 prompt
 			prompt = promptui.Prompt{
 				Label: "Enter key 2",
-				Validate: func(input string) error {
-					if len(input) != 16 {
-						return errors.New("key must be 16 bytes")
-					}
-					return nil
-				},
+				Validate: keyvalidator,
 			}
 
 			k2prompt, err := prompt.Run()
@@ -187,12 +185,7 @@ func main() {
 			// key 3 prompt
 			prompt = promptui.Prompt{
 				Label: "Enter key 3",
-				Validate: func(input string) error {
-					if len(input) != 16 {
-						return errors.New("key must be 16 bytes")
-					}
-					return nil
-				},
+				Validate: keyvalidator,
 			}
 
 			k3prompt, err := prompt.Run()

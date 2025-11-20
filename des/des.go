@@ -7,12 +7,17 @@ import (
 	"errors"
 )
 
-type DES struct {
-	Key1 []byte
-	Key2 []byte
-	Key3 []byte
 
-	Iv []byte
+// DES struct holds the 3 keys and the IV
+// The keys are 16 bytes each
+// The IV is 8 bytes
+// Key total length is 48
+type DES struct {
+	Key1 []byte // 16 bytes
+	Key2 []byte // 16 bytes
+	Key3 []byte // 16 bytes
+
+	Iv []byte // 8 bytes
 }
 
 

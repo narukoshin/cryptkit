@@ -6,6 +6,7 @@
 !main.go
 !LICENSE
 !go.mod
+!go.sum
 
 # Allowing des folder
 !des

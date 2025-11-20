@@ -5,6 +5,7 @@
 !.gitignore
 !main.go
 !LICENSE
+!go.mod
 
 # Allowing des folder
 !des

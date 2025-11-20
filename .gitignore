@@ -1,0 +1,10 @@
+# Deny List
+*
+
+# Allow List
+!.gitignore
+!main.go
+
+# Allowing des folder
+!des
+!des/*

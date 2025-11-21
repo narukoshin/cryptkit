@@ -5,19 +5,51 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-
 	"os"
 
 	"github.com/manifoldco/promptui"
-
+	"gopkg.in/yaml.v3"
+	
 	"github.com/narukoshin/cryptkit/des"
 	"github.com/narukoshin/cryptkit/aes"
-	"gopkg.in/yaml.v3"
 )
 
+/**
+
+Author: Naru Koshin (c) 2025
+https://narukoshin.me
+https://github.com/narukoshin
+naru@narukoshin.me
+
+This is a program that encrypts and decrypts plaintext using
+the Advanced Encryption Standard (AES) or the Data Encryption
+Standard (DES) algorithm. The program takes as input a
+configuration file that specifies the algorithm, operation,
+keys, and IV. The program then encrypts or decrypts the
+plaintext using the specified algorithm and parameters.
+
+### TODO ###
+	- add support to file encryption
+
+### Shoutout section ###
+	NANOWAR OF STEEL - HelloWorld.java (https://youtu.be/yup8gIXxWDU)
+		This is probably one of the best songs for programmers and made by people that aren't programmers.
+
+	Sheeno Mirin - OSINT (https://youtu.be/N9gQqOf58mQ)
+		hi- わかる、このコードは糞！ごめん。
+
+	KAT x Aku P - Affection Addiction (https://youtu.be/UTcZHzDY3LU)
+		Don't show this project to Aku, he will laugh at this code. It's too messy and I'm too lazy to clean it up.
+		Btw, there is a metal cover that i just found.
+**/
+
+// algorithm is a type alias for string
 type algorithm string
+
+// operation is a type alias for string
 type operation string
 
+// config is a struct that holds the configuration for the program
 type config struct {
 	Algorithm algorithm `yaml:"algorithm"`
 	Input string `yaml:"input"`
@@ -26,6 +58,7 @@ type config struct {
 	Iv string `yaml:"iv"`
 }
 
+// c is a global variable that holds the configuration
 var c config
 
 // Validation checks if the algorithm and operation are valid.
@@ -56,6 +89,7 @@ func main() {
 	config := flag.String("config", "", "Path to config file")
 	flag.Parse()
 
+	// Loading from the config
 	if *config != "" {
 		// Config mode
 		if _, err := os.Stat(*config); err != nil {
@@ -140,6 +174,7 @@ func main() {
 				fmt.Println(string(plaintext))
 			}
 		}
+	// Using UI interaction mode
 	} else {
 		// prompt for what encryption algoritm to use 3DES or AES
 		prompt := promptui.Select{
@@ -344,6 +379,37 @@ func main() {
 			// switch what operation is being used
 			switch c.Operation {
 			case "encrypt": {
+				// random IV or custom
+				prompt := promptui.Select{
+					Label: "Select IV",
+					Items: []string{"Random", "Custom"},
+				}
+
+				_, ivtypeprompt, err := prompt.Run()
+				if err != nil {
+					fmt.Printf("Prompt failed %v\n", err)
+					return
+				}
+				if ivtypeprompt == "Custom" {
+					// Prompting input
+					ivprompt := promptui.Prompt{
+						Label: "Enter IV",
+						Validate: func(input string) error {
+							if len(input) != 16 {
+								return errors.New("IV must be 16 bytes")
+							}
+							return nil
+						},
+					}
+
+					iv, err := ivprompt.Run()
+					if err != nil {
+						fmt.Printf("Prompt failed %v\n", err)
+						return
+					}
+					aes.Iv = []byte(iv)
+				}
+
 				// Asking for plain text input
 				ptxprompt := promptui.Prompt{
 					Label: "Enter plain text",

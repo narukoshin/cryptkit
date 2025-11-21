@@ -43,13 +43,15 @@ func Validation() {
 		}
 }
 
-// main is the entry point for the program. It parses flags and then either
-// reads a config file or prompts the user for input. It then validates the
-// input and then performs the desired operation based on the algorithm
-// selected. If the algorithm is AES, it prompts for a key and then
-// encrypts or decrypts the input. If the algorithm is DES, it prompts
-// for three keys and an IV, and then encrypts or decrypts the input.
-// If there is an error, it prints an error message and exits with status 1.
+
+// main is the entry point of the program. It is responsible for
+// parsing the arguments and loading the configuration file, if
+// specified. It then prompts the user for what encryption
+// algorithm to use, and whether to encrypt or decrypt. If the
+// algorithm is 3DES, it prompts the user for three keys and an
+// IV. If the algorithm is AES, it prompts the user for a single
+// key and an IV. Finally, it encrypts or decrypts the given
+// plaintext using the chosen algorithm and parameters.
 func main() {
 	config := flag.String("config", "", "Path to config file")
 	flag.Parse()
@@ -151,16 +153,16 @@ func main() {
 			return
 		}
 
+		keyvalidator := func(input string) error {
+			if len(input) != 32 {
+					return errors.New("key must be 32 characters long")
+				}
+				return nil
+		}
+
 		// switch what algorithm is being used
 		switch result {
 		case "3DES":
-			keyvalidator := func(input string) error {
-				if len(input) != 32 {
-						return errors.New("key must be 32 characters long")
-					}
-					return nil
-			}
-
 			c.Algorithm = "des"
 			// key 1 prompt
 			// validate key length
@@ -311,10 +313,72 @@ func main() {
 				fmt.Println(string(ptx))
 			}
 		case "AES":
-			c.Algorithm = "aes"
+			// Asking for the key
+			prompt := promptui.Prompt{
+				Label: "Enter key",
+				Validate: keyvalidator,
+			}
 
-			fmt.Println("Under construction")
+			kprompt, err := prompt.Run()
+			if err != nil {
+				fmt.Printf("Prompt failed %v\n", err)
+				return
+			}
+			// Operation- encrypt or decrypt
+			prompt2 := promptui.Select{
+				Label: "Select operation",
+				Items: []string{"encrypt", "decrypt"},
+			}
+
+			_, operationprompt, err := prompt2.Run()
+			if err != nil {
+				fmt.Printf("Prompt failed %v\n", err)
+				return
+			}
+			c.Operation = operation(operationprompt)
+
+			aes := aes.AES {
+				Key: []byte(kprompt),
+			}
+
+			// switch what operation is being used
+			switch c.Operation {
+			case "encrypt": {
+				// Asking for plain text input
+				ptxprompt := promptui.Prompt{
+					Label: "Enter plain text",
+				}
+
+				plaintext, err := ptxprompt.Run()
+				if err != nil {
+					fmt.Printf("Prompt failed %v\n", err)
+					return
+				}
+				
+				ciphertext, err := aes.Encrypt([]byte(plaintext))
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(ciphertext)
+			}
+			case "decrypt":
+				// decrypt the file
+				prompt := promptui.Prompt{
+					Label: "Enter cipher text",
+				}
+
+				ciphertext, err := prompt.Run()
+				if err != nil {
+					fmt.Printf("Prompt failed %v\n", err)
+					return
+				}
+
+				ptx, err := aes.Decrypt(ciphertext)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(string(ptx))
+			}
 		}
-
 	}
 }

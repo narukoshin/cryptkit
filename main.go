@@ -11,6 +11,7 @@ import (
 	"github.com/manifoldco/promptui"
 
 	"github.com/narukoshin/cryptkit/des"
+	"github.com/narukoshin/cryptkit/aes"
 	"gopkg.in/yaml.v3"
 )
 
@@ -76,12 +77,26 @@ func main() {
 		// switch what algorithm is being used
 		switch c.Algorithm {
 		case "aes":
+			aes := aes.AES {
+				Key: []byte(c.Keys[0]),
+				Iv: []byte(c.Iv),
+			}
 			// switch what operation is being used
 			switch c.Operation {
 			case "encrypt":
 				// encrypt the file
+				ciphertext, err := aes.Encrypt([]byte(c.Input))
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(ciphertext)
 			case "decrypt":
 				// decrypt the file
+				plaintext, err := aes.Decrypt(c.Input)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(string(plaintext))
 			}
 		case "des":
 			if c.Iv == "" {

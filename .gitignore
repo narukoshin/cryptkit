@@ -12,3 +12,7 @@
 # Allowing des folder
 !des
 !des/*
+
+# Allowing aes folder
+!aes
+!aes/*

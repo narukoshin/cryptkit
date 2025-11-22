@@ -1,4 +1,8 @@
-# DES Encryption Example
+##############################
+  ######### DES #########
+##############################
+
+# Encryption Example
 algorithm: des
 input: MY NAME IS RALF
 operation: encrypt
@@ -17,3 +21,15 @@ keys:
   - 102132435465768798A9BACCADAEAF0F
   - FFEEDDCCBBAA99887766554433221100
 iv: # ignored in decryption mode, IV is being taken from ciphertext header
+
+##############################
+  ######### AES #########
+##############################
+
+# AES Encryption Example with reading and writing to file.
+algorithm: aes
+input: "@plaintext.txt"
+operation: encrypt
+keys: 
+  - 00112233445566778899AABBCCDDEEFF
+output_file: ciphertext.txt

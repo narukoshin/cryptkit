@@ -6,12 +6,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"gopkg.in/yaml.v3"
-	
-	"github.com/narukoshin/cryptkit/des"
+
 	"github.com/narukoshin/cryptkit/aes"
+	"github.com/narukoshin/cryptkit/des"
 )
 
 /**
@@ -28,11 +29,11 @@ configuration file that specifies the algorithm, operation,
 keys, and IV. The program then encrypts or decrypts the
 plaintext using the specified algorithm and parameters.
 
-This project is powered by Go, an absolute unit of a music playlist, 
+This project is powered by Go, an absolute unit of a music playlist,
 	and enough liters of energy drink to wake up a coma patient.
 
 ### TODO ###
-	- add support to file encryption
+	- add support to file encryption : DONE.
 
 ### Shoutout section ###
 	NANOWAR OF STEEL - HelloWorld.java (https://youtu.be/yup8gIXxWDU)
@@ -44,6 +45,9 @@ This project is powered by Go, an absolute unit of a music playlist,
 	KAT x Aku P - Affection Addiction (https://youtu.be/UTcZHzDY3LU)
 		Don't show this project to Aku, he will laugh at this code. It's too messy and I'm too lazy to clean it up.
 		Btw, there is a metal cover that i just found.
+
+	Staircatte - LOG OFF (https://youtu.be/qKOJ5_IkUXY)
+
 **/
 
 // algorithm is a type alias for string
@@ -52,6 +56,24 @@ type algorithm string
 // operation is a type alias for string
 type operation string
 
+// operation constants for encrypt and decrypt
+const (
+	ENCRYPT operation = "Encrypt"
+	DECRYPT operation = "Decrypt"
+)
+
+// I/O constants for text, file and stdout
+const (
+	TEXT string = "Text"
+	FILE string = "File"
+	STDOUT string = "Stdout"
+)
+
+// String returns the string representation of the operation.
+func (o operation) String() string {
+	return string(o)
+}
+
 // config is a struct that holds the configuration for the program
 type config struct {
 	Algorithm algorithm `yaml:"algorithm"`
@@ -59,6 +81,7 @@ type config struct {
 	Operation operation `yaml:"operation"`
 	Keys []string `yaml:"keys"`
 	Iv string `yaml:"iv"`
+	Otp string `yaml:"output_file"`
 }
 
 // c is a global variable that holds the configuration
@@ -79,6 +102,144 @@ func Validation() {
 		}
 }
 
+// InputPrompt prompts the user for either plaintext or a file path to read
+// plaintext from. If the user chooses plaintext, it prompts the user to enter
+// plaintext. If the user chooses a file path, it prompts the user to enter a
+// file path. It then reads the plaintext from the file and returns it as a byte
+// slice. If an error occurs during this process, it returns an error.
+func InputPrompt() ([]byte, error) {
+	prompt := promptui.Select{
+		Label: "Input",
+		Items: []string{TEXT, FILE},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		return nil, err
+	}
+	switch result {
+	case TEXT:
+		prompt := promptui.Prompt{
+			Label: "Enter the text",
+		}
+		plainText, err := prompt.Run()
+		if err != nil {
+			return nil, err
+		}
+		return []byte(plainText), nil
+	case FILE:
+		prompt := promptui.Prompt{
+			Label: "Enter file path",
+		}
+		filePath, err := prompt.Run()
+		if err != nil {
+			return nil, err
+		}
+		file, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, err
+		}
+		return file, nil
+	}
+	return nil, nil
+}
+
+// IVPrompt is a function that asks the user if they want to use a random IV or
+// a custom IV. If the user chooses custom, it then asks the user to input the
+// IV. The IV is then validated according to the algorithm being used. If the
+// IV is invalid, an error is returned. If the user chooses random, an empty
+// string is returned. If an error occurs during this process, it returns an
+// error.
+func IVPrompt(algorithm string) (string, error) {
+	ivValidator := func(input string) error {
+		// des - 8 bytes
+		// aes - 16 bytes
+		if algorithm == "3DES" && len(input) != 8 {
+			return errors.New("des iv should be 8 characters long")
+		}
+		if algorithm == "AES" && len(input) != 16 {
+			return errors.New("aes iv should be 16 characters long")
+		}
+		return nil
+	}
+	// Select Random or custom
+	prompt := promptui.Select{
+		Label: "IV",
+		Items: []string{"Random", "Custom"},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+	switch result {
+	case "Random":
+		return "", nil
+	case "Custom":
+		prompt := promptui.Prompt{
+			Label: "Enter the IV",
+			Validate: ivValidator,
+		}
+		iv, err := prompt.Run()
+		if err != nil {
+			return "", err
+		}
+		return iv, nil
+	}
+	return "", errors.New("invalid option")
+}
+
+
+// OperationPrompt prompts the user to select an operation, either
+// ENCRYPT or DECRYPT. It then returns the selected operation and
+// an error if one occurs. The returned operation is suitable for
+// use with the Encrypt and Decrypt functions. The error is suitable
+// for returning to the user.
+func OperationPrompt() (operation, error) {
+	prompt := promptui.Select{
+		Label: "Operation",
+		Items: []string{ENCRYPT.String(), DECRYPT.String()},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+	return operation(result), nil
+}
+
+
+// OutputPrompt prompts the user to select where the output should be written.
+// It then returns the selected output type and an error if one occurs.
+// The returned output type is suitable for use with the Save function.
+// The error is suitable for returning to the user.
+func OutputPrompt(output string) error {
+	// Output in file or stdout
+	prompt := promptui.Select{
+		Label: "Output",
+		Items: []string{FILE, STDOUT},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		return err
+	}
+
+	switch result {
+	case FILE:
+		prompt := promptui.Prompt{
+			Label: "Enter file path",
+		}
+		filePath, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		// Writing to file
+		err = os.WriteFile(filePath, []byte(output), 0644)
+		if err != nil {
+			return err
+		}
+	case STDOUT:
+		fmt.Fprintln(os.Stdout, output)
+	}
+	return nil
+}
 
 // main is the entry point of the program. It is responsible for
 // parsing the arguments and loading the configuration file, if
@@ -113,6 +274,21 @@ func main() {
 		}
 		Validation()
 
+		var ptxinput []byte
+
+		// Checking if there is a @ prefix
+		if strings.HasPrefix(c.Input, "@") {
+			// read file
+			f, err := os.ReadFile(c.Input[1:])
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			ptxinput = f
+		} else {
+			ptxinput = []byte(c.Input)
+		}
+
 		// switch what algorithm is being used
 		switch c.Algorithm {
 		case "aes":
@@ -121,27 +297,41 @@ func main() {
 				Iv: []byte(c.Iv),
 			}
 			// switch what operation is being used
-			switch c.Operation {
+			switch strings.ToLower(c.Operation.String()) {
 			case "encrypt":
 				// encrypt the file
-				ciphertext, err := aes.Encrypt([]byte(c.Input))
+				ciphertext, err := aes.Encrypt(ptxinput)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(ciphertext)
+
+				// writing output to the file
+				if c.Otp != "" {
+					err = os.WriteFile(c.Otp, []byte(ciphertext), 0644)
+					if err != nil {
+						panic(err)
+					}
+				} else {
+					fmt.Println(ciphertext)
+				}
 			case "decrypt":
 				// decrypt the file
-				plaintext, err := aes.Decrypt(c.Input)
+				plaintext, err := aes.Decrypt(string(ptxinput))
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(string(plaintext))
+
+				// writing output to the file
+				if c.Otp != "" {
+					err = os.WriteFile(c.Otp, []byte(plaintext), 0644)
+					if err != nil {
+						panic(err)
+					}
+				} else {
+					fmt.Println(string(plaintext))
+				}
 			}
 		case "des":
-			if c.Iv == "" {
-				fmt.Println("IV is required for DES.")
-				os.Exit(1)
-			}
 			if len(c.Keys) != 3 {
 				fmt.Println("DES requires 3 keys.")
 				os.Exit(1)
@@ -158,15 +348,15 @@ func main() {
 				Iv: []byte(c.Iv),
 			}
 
-			switch c.Operation {
+			switch strings.ToLower(c.Operation.String()) {
 			case "encrypt":
-				ciphertext, err := des.Encrypt([]byte(c.Input))
+				ciphertext, err := des.Encrypt(ptxinput)
 				if err != nil {
 					panic(err)
 				}
 				fmt.Println(hex.EncodeToString(ciphertext))
 			case "decrypt":
-				pxt, err := hex.DecodeString(c.Input)
+				pxt, err := hex.DecodeString(string(ptxinput))
 				if err != nil {
 					panic(err)
 				}
@@ -185,7 +375,7 @@ func main() {
 			Items: []string{"3DES", "AES"},
 		}
 
-		_, result, err := prompt.Run()
+		_, algorithmprompt, err := prompt.Run()
 		if err != nil {
 			fmt.Printf("Prompt failed %v\n", err)
 			return
@@ -194,14 +384,13 @@ func main() {
 		keyvalidator := func(input string) error {
 			if len(input) != 32 {
 					return errors.New("key must be 32 characters long")
-				}
-				return nil
+			}
+			return nil
 		}
 
 		// switch what algorithm is being used
-		switch result {
+		switch algorithmprompt {
 		case "3DES":
-			c.Algorithm = "des"
 			// key 1 prompt
 			// validate key length
 			prompt := promptui.Prompt{
@@ -254,19 +443,13 @@ func main() {
 				panic(err)
 			}
 
-			// Operation prompt
-			prompt2 := promptui.Select{
-				Label: "Select operation",
-				Items: []string{"encrypt", "decrypt"},
-			}
-
-			_, operationprompt, err := prompt2.Run()
+			c.Operation, err = OperationPrompt()
 			if err != nil {
 				fmt.Printf("Prompt failed %v\n", err)
 				return
 			}
-			c.Operation = operation(operationprompt)
 
+			// create the DES struct
 			des := des.DES {
 				Key1: k1,
 				Key2: k2,
@@ -275,63 +458,36 @@ func main() {
 
 			// switch what operation is being used
 			switch c.Operation {
-			case "encrypt":
-
-				// random IV or custom
-				prompt := promptui.Select{
-					Label: "Select IV",
-					Items: []string{"Random", "Custom"},
-				}
-
-				_, ivtypeprompt, err := prompt.Run()
+			case ENCRYPT:
+				iv, err := IVPrompt(algorithmprompt)
 				if err != nil {
 					fmt.Printf("Prompt failed %v\n", err)
 					return
 				}
-				if ivtypeprompt == "Custom" {
-					// Prompting input
-					ivprompt := promptui.Prompt{
-						Label: "Enter IV",
-						Validate: func(input string) error {
-							if len(input) != 8 {
-								return errors.New("IV must be 8 bytes")
-							}
-							return nil
-						},
-					}
-
-					iv, err := ivprompt.Run()
-					if err != nil {
-						fmt.Printf("Prompt failed %v\n", err)
-						return
-					}
-					des.Iv = []byte(iv)
-				}
-
-				// Asking for plain text input
-				ptxprompt := promptui.Prompt{
-					Label: "Enter plain text",
-				}
-
-				plaintext, err := ptxprompt.Run()
+				des.Iv = []byte(iv)
+				
+				inputPrompt, err := InputPrompt()
 				if err != nil {
 					fmt.Printf("Prompt failed %v\n", err)
 					return
 				}
-				c.Input = plaintext
 
-				ciphertext, err := des.Encrypt([]byte(c.Input))
+				ciphertext, err := des.Encrypt(inputPrompt)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(hex.EncodeToString(ciphertext))
-				
-			case "decrypt":
+
+				// print the ciphertext
+				err = OutputPrompt(string(ciphertext))
+				if err != nil {
+					fmt.Printf("Prompt failed %v\n", err)
+					return
+				}
+			case DECRYPT:
 				// decrypt the file
 				prompt = promptui.Prompt{
 					Label: "Enter cipher text",
 				}
-
 				ciphertext, err := prompt.Run()
 				if err != nil {
 					fmt.Printf("Prompt failed %v\n", err)
@@ -343,12 +499,17 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-
 				ptx, err := des.Decrypt(ctx)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(string(ptx))
+
+				// print the plaintext
+				err = OutputPrompt(string(ptx))
+				if err != nil {
+					fmt.Printf("Prompt failed %v\n", err)
+					return
+				}
 			}
 		case "AES":
 			// Asking for the key
@@ -362,91 +523,65 @@ func main() {
 				fmt.Printf("Prompt failed %v\n", err)
 				return
 			}
-			// Operation- encrypt or decrypt
-			prompt2 := promptui.Select{
-				Label: "Select operation",
-				Items: []string{"encrypt", "decrypt"},
-			}
-
-			_, operationprompt, err := prompt2.Run()
+			
+			c.Operation, err = OperationPrompt()
 			if err != nil {
 				fmt.Printf("Prompt failed %v\n", err)
 				return
 			}
-			c.Operation = operation(operationprompt)
-
 			aes := aes.AES {
 				Key: []byte(kprompt),
 			}
 
 			// switch what operation is being used
 			switch c.Operation {
-			case "encrypt": {
-				// random IV or custom
-				prompt := promptui.Select{
-					Label: "Select IV",
-					Items: []string{"Random", "Custom"},
-				}
-
-				_, ivtypeprompt, err := prompt.Run()
+			case ENCRYPT: {
+				// iv prompt
+				ivprompt, err := IVPrompt(algorithmprompt)
 				if err != nil {
 					fmt.Printf("Prompt failed %v\n", err)
 					return
 				}
-				if ivtypeprompt == "Custom" {
-					// Prompting input
-					ivprompt := promptui.Prompt{
-						Label: "Enter IV",
-						Validate: func(input string) error {
-							if len(input) != 16 {
-								return errors.New("IV must be 16 bytes")
-							}
-							return nil
-						},
-					}
+				aes.Iv = []byte(ivprompt)
 
-					iv, err := ivprompt.Run()
-					if err != nil {
-						fmt.Printf("Prompt failed %v\n", err)
-						return
-					}
-					aes.Iv = []byte(iv)
-				}
-
-				// Asking for plain text input
-				ptxprompt := promptui.Prompt{
-					Label: "Enter plain text",
-				}
-
-				plaintext, err := ptxprompt.Run()
+				// Input prompt
+				inputPrompt, err := InputPrompt()
 				if err != nil {
 					fmt.Printf("Prompt failed %v\n", err)
 					return
 				}
 				
-				ciphertext, err := aes.Encrypt([]byte(plaintext))
+				ctx, err := aes.Encrypt(inputPrompt)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(ciphertext)
-			}
-			case "decrypt":
-				// decrypt the file
-				prompt := promptui.Prompt{
-					Label: "Enter cipher text",
-				}
 
-				ciphertext, err := prompt.Run()
+				// print the ciphertext
+				err = OutputPrompt(string(ctx))
+				if err != nil {
+					fmt.Printf("Prompt failed %v\n", err)
+					return
+				}
+			}
+			case DECRYPT:
+				// input prompt
+				inputPrompt, err := InputPrompt()
 				if err != nil {
 					fmt.Printf("Prompt failed %v\n", err)
 					return
 				}
 
-				ptx, err := aes.Decrypt(ciphertext)
+				ptx, err := aes.Decrypt(string(inputPrompt))
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(string(ptx))
+
+				// print the plaintext
+				err = OutputPrompt(string(ptx))
+				if err != nil {
+					fmt.Printf("Prompt failed %v\n", err)
+					return
+				}
 			}
 		}
 	}

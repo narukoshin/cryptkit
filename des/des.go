@@ -7,7 +7,6 @@ import (
 	"errors"
 )
 
-
 // DES struct holds the 3 keys and the IV
 // The keys are 16 bytes each
 // The IV is 8 bytes
@@ -473,17 +472,14 @@ func (d *DES) Encrypt(plaintext []byte) ([]byte, error) {
 	if len(key48) != 48 {
 		return nil, errors.New("TripleDESEncryptCBC: key must be 48 bytes (3 * 16)")
 	}
-	if d.Iv != nil && len(d.Iv) != 8 {
-		return nil, errors.New("TripleDESEncryptCBC: iv must be nil or 8 bytes")
-	}
 
 	blockSize := 8
 	data := pkcs7Pad(plaintext, blockSize)
 
 	ivBuf := make([]byte, 8)
 
-	// Generate a random 8-byte IV if iv is nil
-	if d.Iv == nil {
+	// Generate a random 8-byte IV if not provided
+	if len(d.Iv) == 0 {
 		_, err := rand.Read(ivBuf)
 		if err != nil {
 			return nil, err

@@ -50,6 +50,8 @@ This project is powered by Go, an absolute unit of a music playlist,
 
 **/
 
+const Version string = "v1.0.0"
+
 // algorithm is a type alias for string
 type algorithm string
 

@@ -16,3 +16,8 @@
 # Allowing aes folder
 !aes
 !aes/*
+
+# Building things
+!build/
+!build/*
+!build.sh

@@ -28,6 +28,9 @@ configuration file that specifies the algorithm, operation,
 keys, and IV. The program then encrypts or decrypts the
 plaintext using the specified algorithm and parameters.
 
+This project is powered by Go, an absolute unit of a music playlist, 
+	and enough liters of energy drink to wake up a coma patient.
+
 ### TODO ###
 	- add support to file encryption
 

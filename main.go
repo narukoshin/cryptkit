@@ -50,7 +50,7 @@ This project is powered by Go, an absolute unit of a music playlist,
 
 **/
 
-const Version string = "v1.0.0"
+const Version string = "v1.0.1"
 
 // algorithm is a type alias for string
 type algorithm string
@@ -238,7 +238,7 @@ func OutputPrompt(output string) error {
 			return err
 		}
 	case STDOUT:
-		fmt.Fprintln(os.Stdout, output)
+		fmt.Println(output)
 	}
 	return nil
 }
